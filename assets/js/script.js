@@ -234,3 +234,59 @@ document.getElementById("checkoutBtn").addEventListener("click", () => {
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, "_blank");
 });
 
+
+// CATEGORY FILTER
+const categoryBtns = document.querySelectorAll(".category-btn");
+const productCards = document.querySelectorAll(".product-card");
+
+categoryBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    // Button active state
+    categoryBtns.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    let category = btn.dataset.category;
+
+    productCards.forEach(card => {
+      card.style.display =
+        card.dataset.category.includes(category) ? "block" : "none";
+    });
+  });
+});
+
+
+/* -----------------------------------------
+   LINK COLLECTION CARDS TO PRODUCT CATEGORIES
+-------------------------------------------*/
+
+document.querySelectorAll(".collection-card").forEach(card => {
+  card.addEventListener("click", () => {
+
+    const category = card.dataset.category; // get category
+
+    // Activate correct category button
+    const targetBtn = document.querySelector(`.category-btn[data-category="${category}"]`);
+
+    if (targetBtn) {
+      // remove active from all
+      document.querySelectorAll(".category-btn").forEach(b => b.classList.remove("active"));
+
+      // set active
+      targetBtn.classList.add("active");
+
+      // Filter products
+      const productCards = document.querySelectorAll(".product-card");
+      productCards.forEach(product => {
+        product.style.display =
+          product.dataset.category.includes(category) ? "block" : "none";
+      });
+    }
+
+    // Scroll to shop section
+    document.querySelector("#shop").scrollIntoView({ 
+      behavior: "smooth",
+      block: "start"
+    });
+
+  });
+});
