@@ -95,3 +95,142 @@ const scrollReveal = function () {
 scrollReveal();
 
 addEventOnElem(window, "scroll", scrollReveal);
+
+document.querySelectorAll(".details-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const target = document.getElementById(btn.dataset.target);
+    target.classList.toggle("active");
+  });
+});
+
+
+/* ------------------------------
+        CART SIDEBAR LOGIC
+--------------------------------*/
+
+const cartSidebar = document.getElementById("cartSidebar");
+const cartOverlay = document.getElementById("cartOverlay");
+const cartItemsContainer = document.getElementById("cartItems");
+const cartTotalEl = document.getElementById("cartTotal");
+const openCartBtn = document.querySelector(".header-action-btn"); // your cart icon
+const closeCartBtn = document.getElementById("closeCart");
+
+let cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+updateCartBadge();
+renderCart();
+
+/* OPEN / CLOSE CART */
+openCartBtn.addEventListener("click", () => {
+  cartSidebar.classList.add("active");
+  cartOverlay.classList.add("active");
+});
+
+closeCartBtn.addEventListener("click", () => {
+  cartSidebar.classList.remove("active");
+  cartOverlay.classList.remove("active");
+});
+
+cartOverlay.addEventListener("click", () => {
+  cartSidebar.classList.remove("active");
+  cartOverlay.classList.remove("active");
+});
+
+/* ADD TO CART BUTTONS */
+document.querySelectorAll(".add-to-cart-btn").forEach(btn => {
+  btn.addEventListener("click", function () {
+
+    const item = {
+      name: btn.dataset.name,
+      price: Number(btn.dataset.price),
+      image: btn.dataset.image,
+      quantity: 1
+    };
+
+    const existing = cart.find(i => i.name === item.name);
+
+    if (existing) {
+      existing.quantity++;
+    } else {
+      cart.push(item);
+    }
+
+    saveCart();
+    updateCartBadge();
+    renderCart();
+  });
+});
+
+/* RENDER CART ITEMS */
+function renderCart() {
+  cartItemsContainer.innerHTML = "";
+
+  let total = 0;
+
+  cart.forEach((item, index) => {
+    total += item.price * item.quantity;
+
+    const cartItem = document.createElement("div");
+    cartItem.classList.add("cart-item");
+
+    cartItem.innerHTML = `
+      <img src="${item.image}">
+      <div class="cart-item-info">
+        <p class="cart-item-title">${item.name}</p>
+        <p class="cart-item-price">$${item.price} × ${item.quantity}</p>
+      </div>
+      <button class="remove-btn" data-index="${index}">Remove</button>
+    `;
+
+    cartItemsContainer.appendChild(cartItem);
+  });
+
+  cartTotalEl.textContent = total.toFixed(2);
+
+  // Remove item logic
+  document.querySelectorAll(".remove-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const index = btn.dataset.index;
+      cart.splice(index, 1);
+      saveCart();
+      updateCartBadge();
+      renderCart();
+    });
+  });
+}
+
+/* SAVE CART */
+function saveCart() {
+  localStorage.setItem("cart", JSON.stringify(cart));
+}
+
+/* UPDATE CART BADGE */
+function updateCartBadge() {
+  const badge = document.querySelector(".btn-badge");
+  const count = cart.reduce((sum, i) => sum + i.quantity, 0);
+  badge.textContent = count;
+}
+
+/* WHATSAPP CHECKOUT */
+const WHATSAPP_NUMBER = "96170123456"; // replace with your number
+
+document.getElementById("checkoutBtn").addEventListener("click", () => {
+  if (cart.length === 0) {
+    alert("Your cart is empty.");
+    return;
+  }
+
+  let message = "🛒 *New Order*%0A%0A";
+
+  cart.forEach((item, i) => {
+    message += `${i + 1}) *${item.name}*%0AQty: ${item.quantity}%0APrice: $${item.price}%0A%0A`;
+  });
+
+  const total = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+  message += `*Total:* $${total.toFixed(2)}%0A%0A`;
+  message += "Please confirm my order.";
+
+  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, "_blank");
+});
+
