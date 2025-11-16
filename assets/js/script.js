@@ -86,9 +86,12 @@ const sections = document.querySelectorAll("[data-section]");
 
 const scrollReveal = function () {
   for (let i = 0; i < sections.length; i++) {
-    if (sections[i].getBoundingClientRect().top < window.innerHeight / 2) {
-      sections[i].classList.add("active");
-    }
+    const rect = sections[i].getBoundingClientRect();
+    const inView =
+      rect.top < window.innerHeight * 0.8 &&
+      rect.bottom > window.innerHeight * 0.2;
+
+    sections[i].classList.toggle("active", inView);
   }
 }
 
@@ -99,7 +102,14 @@ addEventOnElem(window, "scroll", scrollReveal);
 document.querySelectorAll(".details-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     const target = document.getElementById(btn.dataset.target);
+    if (!target) return;
+
     target.classList.toggle("active");
+
+    const card = target.closest(".shop-card");
+    if (card) {
+      card.classList.toggle("details-open", target.classList.contains("active"));
+    }
   });
 });
 
@@ -290,3 +300,124 @@ document.querySelectorAll(".collection-card").forEach(card => {
 
   });
 });
+
+
+/**
+ * Hero slider drag support with infinite scroll
+ */
+
+const heroSlider = document.querySelector(".hero .has-scrollbar");
+
+if (heroSlider) {
+  const originalSlides = Array.from(heroSlider.children);
+
+  if (originalSlides.length > 1) {
+    const beforeFragment = document.createDocumentFragment();
+    const afterFragment = document.createDocumentFragment();
+
+    // Clone slides on both sides to fake an endless track
+    for (let i = originalSlides.length - 1; i >= 0; i--) {
+      beforeFragment.appendChild(originalSlides[i].cloneNode(true));
+    }
+
+    originalSlides.forEach(slide => {
+      afterFragment.appendChild(slide.cloneNode(true));
+    });
+
+    heroSlider.prepend(beforeFragment);
+    heroSlider.append(afterFragment);
+
+    const getSlideWidth = () => {
+      const sample = heroSlider.querySelector(".scrollbar-item");
+      return sample ? sample.offsetWidth : heroSlider.offsetWidth;
+    };
+
+    const slideCount = originalSlides.length;
+    let slideWidth = getSlideWidth();
+    let baseOffset = slideWidth * slideCount;
+
+    const normalizeIndex = () => {
+      if (!slideWidth) return 0;
+      return (heroSlider.scrollLeft - baseOffset) / slideWidth;
+    };
+
+    const syncToMiddle = (index = 0) => {
+      heroSlider.scrollLeft = baseOffset + index * slideWidth;
+    };
+
+    if (slideWidth) {
+      syncToMiddle();
+    }
+
+    const updateMeasurements = () => {
+      const currentIndex = normalizeIndex();
+      const width = getSlideWidth();
+
+      if (!width) return;
+
+      slideWidth = width;
+      baseOffset = slideWidth * slideCount;
+      syncToMiddle(currentIndex);
+    };
+
+    window.addEventListener("load", updateMeasurements);
+    window.addEventListener("resize", updateMeasurements);
+
+    let isPointerDown = false;
+    let startX = 0;
+    let scrollStart = 0;
+    let activePointer = null;
+
+    const stopDrag = () => {
+      if (!isPointerDown) return;
+
+      isPointerDown = false;
+      heroSlider.classList.remove("is-dragging");
+
+      if (activePointer !== null && heroSlider.hasPointerCapture(activePointer)) {
+        heroSlider.releasePointerCapture(activePointer);
+      }
+
+      activePointer = null;
+    };
+
+    heroSlider.addEventListener("pointerdown", event => {
+      isPointerDown = true;
+      startX = event.clientX;
+      scrollStart = heroSlider.scrollLeft;
+      activePointer = event.pointerId;
+
+      heroSlider.classList.add("is-dragging");
+      heroSlider.setPointerCapture(activePointer);
+    });
+
+    heroSlider.addEventListener("pointermove", event => {
+      if (!isPointerDown) return;
+
+      event.preventDefault();
+      heroSlider.scrollLeft = scrollStart - (event.clientX - startX);
+    });
+
+    heroSlider.addEventListener("pointerup", stopDrag);
+    heroSlider.addEventListener("pointercancel", stopDrag);
+    heroSlider.addEventListener("pointerleave", stopDrag);
+
+    const handleInfiniteScroll = () => {
+      const totalWidth = slideWidth * slideCount;
+
+      if (!totalWidth) return;
+
+      if (heroSlider.scrollLeft <= slideWidth) {
+        heroSlider.scrollLeft += totalWidth;
+      } else {
+        const maxScroll = baseOffset + totalWidth * 2 - slideWidth;
+
+        if (heroSlider.scrollLeft >= maxScroll) {
+          heroSlider.scrollLeft -= totalWidth;
+        }
+      }
+    };
+
+    heroSlider.addEventListener("scroll", handleInfiniteScroll);
+  }
+}
